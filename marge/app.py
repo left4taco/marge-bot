@@ -136,6 +136,11 @@ def _parse_config(args):
         help='Marge-bot pushes effectively don\'t change approval status.\n',
     )
     parser.add_argument(
+        '--bot-approve',
+        action='store_true',
+        help='Re-approve the MR after rebase and push.\n',
+    )
+    parser.add_argument(
         '--merge-order',
         default='created_at',
         choices=('created_at', 'updated_at'),
@@ -263,6 +268,7 @@ def main(args=None):
                 add_part_of=options.add_part_of,
                 add_reviewers=options.add_reviewers,
                 reapprove=options.impersonate_approvers,
+                bot_approve=options.bot_approve,
                 approval_timeout=options.approval_reset_timeout,
                 embargo=options.embargo,
                 ci_timeout=options.ci_timeout,

@@ -177,11 +177,13 @@ class MergeJob(object):
         now = datetime.utcnow()
         return self.opts.embargo.covers(now)
 
-    def maybe_reapprove(self, merge_request, approvals):
+    def maybe_reapprove(self, merge_request, approvals, impersonate=True):
         # Re-approve the merge request, in case us pushing it has removed approvals.
-        if self.opts.reapprove:
+        # Either impersonate or approve under bot's name.
+        if self.opts.reapprove or self.opts.bot_approve:
             # approving is not idempotent, so we need to check first that there are no approvals,
-            # otherwise we'll get a failure on trying to re-instate the previous approvals
+            # otherwise we'll get a failure on trying to re-instate the previous approvals or 
+            # approve it under bot's namr
             def sufficient_approvals():
                 return merge_request.fetch_approvals().sufficient
             # Make sure we don't race by ensuring approvals have reset since the push
@@ -191,8 +193,18 @@ class MergeJob(object):
             while sufficient_approvals() and datetime.utcnow() - time_0 < self._options.approval_timeout:
                 log.debug('Approvals haven\'t reset yet, sleeping for %s secs', waiting_time_in_secs)
                 time.sleep(waiting_time_in_secs)
+            log.debug('Approvals get cleared after pushing new commits.')
             if not sufficient_approvals():
-                approvals.reapprove()
+                if impersonate:
+                    log.debug("Now impersonate and restore approvals. ")
+                    approvals.reapprove()
+                else:
+                    log.debug("Now re-approve the MR under bot's name. ")
+                    approvals.bot_approve()
+                    merge_request.comment(
+                        "I'm re-approving this MR on behalf of {}.".format(
+                            ", ".join(["@" + approver for approver in approvals.approver_usernames])
+                    ))
 
     def fetch_source_project(self, merge_request):
         remote = 'origin'
@@ -307,6 +319,7 @@ JOB_OPTIONS = [
     'add_part_of',
     'add_reviewers',
     'reapprove',
+    'bot_approve',
     'approval_timeout',
     'embargo',
     'ci_timeout',
@@ -324,8 +337,9 @@ class MergeJobOptions(namedtuple('MergeJobOptions', JOB_OPTIONS)):
     @classmethod
     def default(
             cls, *,
-            add_tested=False, add_part_of=False, add_reviewers=False, reapprove=False,
-            approval_timeout=None, embargo=None, ci_timeout=None, use_merge_strategy=False
+            add_tested=False, add_part_of=False, add_reviewers=False, reapprove=False, 
+            bot_approve=False, approval_timeout=None, embargo=None, ci_timeout=None,
+            use_merge_strategy=False
     ):
         approval_timeout = approval_timeout or timedelta(seconds=0)
         embargo = embargo or IntervalUnion.empty()
@@ -335,6 +349,7 @@ class MergeJobOptions(namedtuple('MergeJobOptions', JOB_OPTIONS)):
             add_part_of=add_part_of,
             add_reviewers=add_reviewers,
             reapprove=reapprove,
+            bot_approve=bot_approve,
             approval_timeout=approval_timeout,
             embargo=embargo,
             ci_timeout=ci_timeout,

@@ -63,7 +63,7 @@ class SingleMergeJob(MergeJob):
             if sha_now != actual_sha:
                 raise CannotMerge('Someone pushed to branch while we were trying to merge')
 
-            self.maybe_reapprove(merge_request, approvals)
+            self.maybe_reapprove(merge_request, approvals, impersonate=False)
 
             if source_project.only_allow_merge_if_pipeline_succeeds:
                 self.wait_for_ci_to_pass(merge_request, actual_sha)
