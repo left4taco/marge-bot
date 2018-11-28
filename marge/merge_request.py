@@ -116,13 +116,14 @@ class MergeRequest(gitlab.Resource):
 
         return self._api.call(POST(notes_url, {'body': message}))
 
-    def accept(self, remove_branch=False, sha=None):
+    def accept(self, remove_branch=False, sha=None, merge_message=""):
         return self._api.call(PUT(
             '/projects/{0.project_id}/merge_requests/{0.iid}/merge'.format(self),
             dict(
                 should_remove_source_branch=remove_branch,
                 merge_when_pipeline_succeeds=True,
                 sha=sha or self.sha,  # if provided, ensures what is merged is what we want (or fails)
+                merge_commit_message=merge_message
             ),
         ))
 
