@@ -1,7 +1,7 @@
 from . import gitlab
 
 
-GET = gitlab.GET
+GET, PUT = gitlab.GET, gitlab.PUT
 
 
 class User(gitlab.Resource):
@@ -54,3 +54,18 @@ class User(gitlab.Resource):
     @property
     def state(self):
         return self.info['state']
+    
+    @property
+    def status(self):
+        return self._api.call(GET(
+             "/user/status"
+        ))
+
+    def set_status(self, emoji="robot", status="I'm a robot."):
+        return self._api.call(PUT(
+             "/user/status",
+            dict(
+                emoji=emoji,
+                message=status
+            ),
+        ))

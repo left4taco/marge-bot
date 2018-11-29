@@ -159,7 +159,13 @@ class Bot(object):
             project=project, merge_request=merge_request, repo=repo,
             options=self._config.merge_opts,
         )
-        merge_job.execute()
+        user = self._config.user
+        try:
+            user.set_status(emoji="sweat_drops", status="I'm busy now. Working on MR !{}. "
+                .format(merge_request.iid))
+            merge_job.execute()
+        finally:
+            user.set_status()
 
     def _get_single_job(self, project, merge_request, repo, options):
         return single_merge_job.SingleMergeJob(
