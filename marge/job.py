@@ -143,6 +143,14 @@ class MergeJob(object):
         log.info('Waiting for CI to pass for MR !%s', merge_request.iid)
         while datetime.utcnow() - time_0 < self._options.ci_timeout:
             ci_status = self.get_mr_ci_status(merge_request, commit_sha=commit_sha)
+            merge_request.refetch_info()
+
+            if commit_sha != merge_request.sha:
+                raise CannotMerge('MR HEAD has moved. I cannot merge it anymore. Back to you. ')
+
+            if merge_request.work_in_progress:
+                raise CannotMerge('MR has gone back to WIP. I cannot merge it anymore. Back to you. ')
+
             if ci_status == 'success':
                 log.info('CI for MR !%s passed', merge_request.iid)
                 return
